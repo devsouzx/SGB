@@ -1,50 +1,131 @@
 #include <stdio.h>
 #include <strings.h>
-#define MAX 100
 
-typedef struct bibllioteca {
-    int identificador;
-    char name[];
-} Bibliotaca;
+#define MAX_USUARIOS 1000
+#define MAX_LIVROS 5000
+#define MAX_EXEMPLARES 10000
+#define MAX_EMPRESTIMOS 5000
+#define MAX_RESERVAS 2000
+
+typedef struct {
+    int id;
+    char nome[100];
+    char cpf[15];
+    char email[100];
+    char telefone[20];
+    char endereco[200];
+    char tipoUsuario[30];
+    char matricula[20];
+    int status;
+    int limiteEmprestimos;
+    int emprestimosAtivos;
+    char dataCadastro[11];
+    float multaPendente;
+} Usuario;
 
 typedef struct exemplar {
-    int identificador;
-    int codigo;
-    int edicao;
-    int ano;
-    int volume;
-    char suporte;
-    char numeroChamada;
-    char localizacao;
-    bool disponivel;
-    Bibliotaca bibllioteca;
+    int id;
+    int livroId;
+    char numeroChamada[50];
+    char localizacao[100];
+    char volume[30];
+    char suporte[20]; 
+    int status;
+    int usuarioId;
+    char dataEmprestimo[11];
+    char dataDevolucao[11];
+    char biblioteca[100];
 } Exemplar;
 
 typedef struct livro {
-    int identifcador;
-    int isbn;
-    char titulo[MAX];
-    char edicao[MAX];
-    char imprenta[MAX];
-    char material[MAX];
-    int numExemplares;
-    char slang[MAX];
-    Exemplar exemplares[MAX];
+    int id;
+    long long isbn;
+    char titulo[200];
+    char autor[100];
+    char editora[100];
+    char localPublicacao[100];
+    int anoPublicacao;
+    int edicao;
+    char descricaoFisica[100];
+    char serie[100];
+    char notas[500];
+    char assunto[300];
+    char classificacao[50];
+    char idioma[30];
+    char tipoMaterial[50];
+    int totalExemplares;
+    int disponiveis;
+    char dataCadastro[11];
 } Livro;
 
-typedef struct catalogo {
-    Livro livros[MAX];
-    int tamanho;
+typedef struct {
+    int id;
+    int usuarioId;
+    int exemplarId;
+    char dataEmprestimo[11];
+    char dataDevolucaoPrevista[11];
+    char dataDevolucaoReal[11];
+    int renovacoes;
+    int status;
+    float multa;
+} Emprestimo;
+
+typedef struct {
+    int id;
+    int usuarioId;
+    int livroId;
+    char dataReserva[11];
+    char dataExpiracao[11];
+    int prioridade;
+    int status;
+} Reserva;
+
+typedef struct {
+    Usuario usuarios[MAX_USUARIOS];
+    int total;
+} ListaUsuarios;
+
+typedef struct {
+    Livro livros[MAX_LIVROS];
+    int total;
 } Catalogo;
+
+typedef struct {
+    Exemplar exemplares[MAX_EXEMPLARES];
+    int total;
+} ListaExemplares;
+
+typedef struct {
+    Emprestimo emprestimos[MAX_EMPRESTIMOS];
+    int total;
+} HistoricoEmprestimos;
+
+typedef struct {
+    Reserva reservas[MAX_RESERVAS];
+    int total;
+} ListaReservas;
 
 void cadastrarUsuario() {
     // implementar cadastro do usuario
 }
 
 void LerLivro(Livro *livro) {
-    // implementar cadastro do livro
     printf("Entre com o titulo do livro: ");
-    fgets(livro->titulo, MAX, stdin);
+    fgets(livro->titulo, MAX_STR, stdin);
+}
+
+void LerUsuario(Usuario *usuario) {
+    printf("Entre o nome do usuario: ");
+    fgets(usuario->nome, MAX_STR, stdin);
+
+    printf("Entre o email do usuario: ");
+    fgets(usuario->email, MAX_STR, stdin);
+
+    printf("Entre o cpf do usuario: ");
+    fgets(usuario->cpf, 15, stdin);
+
+    printf("Entre o limite de emprestimos do usuario: ");
+    scanf("%d", usuario->limiteEmprestimos);
 }
 
 void emprestarLivro() {
@@ -97,7 +178,10 @@ int main() {
     int opcao = -1;
     Catalogo catalogo;
     Livro livro;
+    Usuarios listaUsuarios;
+    Usuario usuario;
     catalogo.tamanho = 0;
+    listaUsuarios.tamanho = 0;
     while(opcao!=8) {
         printf("===================== MENU =====================\n");
         printf("1 - Exibir Catalogo\n");
@@ -121,10 +205,29 @@ int main() {
                 catalogo.livros[catalogo.tamanho] = livro;
                 catalogo.tamanho++;
                 break;
+            case 3:
+                LerUsuario(&usuario);
+                usuario.idUsuario = listaUsuarios.tamanho;
+                listaUsuarios.usuarios[listaUsuarios.tamanho] = usuario;
+                listaUsuarios.tamanho++;
+
+                printf("============== Usuario ================");
+                printf("IDENTIFICADOR: %d\n", usuario.idUsuario);
+                printf("NOME: %s\n", usuario.nome);
+                printf("EMAIL: %s\n", usuario.email);
+                printf("CPF: %s\n", usuario.cpf);
+                printf("LIMITE DE EMPRESTIMOS: %d\n", usuario.limiteEmprestimos);
+                break;
+            case 4:
+                break;
+            case 5:
+                break;
+            case 6:
+                break;
             case 7:
-                char titulo[MAX];
+                char titulo[MAX_STR];
                 printf("Entre o titulo do livro que deseja buscar: ");
-                fgets(titulo, MAX, stdin);
+                fgets(titulo, MAX_STR, stdin);
 
                 /*
                 int posicao = 0;
