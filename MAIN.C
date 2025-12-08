@@ -162,9 +162,27 @@ void cadastrarUsuario() {
     }
 
     usuarios.usuarios[usuarios.total] = novoUsuario;
-    usuarios.total;
+    usuarios.total++;
 
     printf("\nUsuario cadastrado com sucesso! ID: %d\n", novoUsuario.id);
+}
+
+void listarUsuarios() {
+    printf("\n=== LISTA DE USUARIOS (%d) ===\n", usuarios.total);
+    for (int i = 0; i < usuarios.total; i++) {
+        Usuario u = usuarios.usuarios[i];
+        printf("ID: %d | Matricula: %s | Nome: %s | Tipo: %s | Emprestimos: %d/%d\n",
+               u.id, u.matricula, u.nome, u.tipoUsuario, u.emprestimosAtivos, u.limiteEmprestimos);
+    }
+}
+
+int buscarUsuarioPorCPF(char *cpf) {
+    for (int i = 0; i < usuarios.total; i++) {
+        if (strcmp(usuarios.usuarios[i].cpf, cpf) == 0) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 void emprestarLivro() {
@@ -203,7 +221,7 @@ int main() {
     printf("=============================================\n");
 
     int opcao = -1;
-    while(opcao!=8) {
+    while(opcao!=11) {
         printf("===================== MENU =====================\n");
         printf("1 - Exibir Catalogo\n");
         printf("2 - Adicionar Livro\n");
@@ -212,7 +230,9 @@ int main() {
         printf("5 - Devolver Livro\n");
         printf("6 - Renovar Livro\n");
         printf("7 - Buscar Livro\n");
-        printf("8 - Sair\n");
+        printf("9 - Listar Usuarios\n");
+        printf("10 - Buscar Usuario por CPF\n");
+        printf("11 - Sair\n");
         printf("Entre opcao: ");
         scanf("%d", &opcao);
         getchar();
@@ -220,6 +240,24 @@ int main() {
         switch (opcao) {
             case 3:
                 cadastrarUsuario();
+                break;
+            case 9:
+                listarUsuarios();
+                break;
+            case 10:
+                char cpf[15];
+                printf("CPF: ");
+                fgets(cpf, 15, stdin);
+                int index = buscarUsuarioPorCPF(cpf);
+                if (index != -1) {
+                    Usuario u = usuarios.usuarios[index];
+                    printf("\nUsuario encontrado:\n");
+                    printf("Nome: %s\n", u.nome);
+                    printf("Matricula: %s\n", u.matricula);
+                    printf("Email: %s\n", u.email);
+                } else {
+                    printf("Usuario nao encontrado!\n");
+                }
                 break;
         }
     }
