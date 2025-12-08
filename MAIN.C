@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <strings.h>
+#include <time.h>
 
 #define MAX_USUARIOS 1000
 #define MAX_LIVROS 5000
@@ -105,27 +106,65 @@ typedef struct {
     int total;
 } ListaReservas;
 
+// iniciar variaveis globais
+ListaUsuarios usuarios = {0};
+Catalogo catalogo = {0};
+ListaExemplares exemplares = {0};
+HistoricoEmprestimos historico = {0};
+ListaReservas reservas = {0};
+
+void dataAtual(char *data) {
+    time_t t = time(NULL);           // 1. Pegar tempo atual do sistema
+    struct tm tm = *localtime(&t);   // 2. Converter para struct
+    // 3. Formatar DD/MM/AAAA
+    sprintf(data, "%02d/%02d/%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
+}
+
 void cadastrarUsuario() {
-    // implementar cadastro do usuario
-}
+    if (usuarios.total >= MAX_USUARIOS) {
+        printf("Limite de usuarios atingido!\n");
+        return;
+    }
 
-void LerLivro(Livro *livro) {
-    printf("Entre com o titulo do livro: ");
-    fgets(livro->titulo, MAX_STR, stdin);
-}
+    Usuario novoUsuario;
+    novoUsuario.id = usuarios.total;
+    novoUsuario.status = 1;
+    novoUsuario.emprestimosAtivos = 0;
+    novoUsuario.multaPendente = 0.0;
+    dataAtual(novoUsuario.dataCadastro);
 
-void LerUsuario(Usuario *usuario) {
-    printf("Entre o nome do usuario: ");
-    fgets(usuario->nome, MAX_STR, stdin);
+    printf("\n=== CADASTRO DE USUARIO ===\n");
+    
+    printf("Nome: ");
+    fgets(novoUsuario.nome, 100, stdin);
 
-    printf("Entre o email do usuario: ");
-    fgets(usuario->email, MAX_STR, stdin);
+    printf("Matricula: ");
+    fgets(novoUsuario.matricula, 20, stdin);
 
-    printf("Entre o cpf do usuario: ");
-    fgets(usuario->cpf, 15, stdin);
+    printf("CPF: ");
+    fgets(novoUsuario.cpf, 15, stdin);
+    
+    printf("Email: ");
+    fgets(novoUsuario.email, 200, stdin);
+    
+    printf("Telefone: ");
+    fgets(novoUsuario.telefone, 20, stdin);
+    
+    printf("Tipo (Aluno/Professor/Funcionario): ");
+    fgets(novoUsuario.tipoUsuario, 30, stdin);
 
-    printf("Entre o limite de emprestimos do usuario: ");
-    scanf("%d", usuario->limiteEmprestimos);
+    if (strcasecmp(novoUsuario.tipoUsuario, "Professor") == 0) {
+        novoUsuario.limiteEmprestimos = 10;
+    } else if (strcasecmp(novoUsuario.tipoUsuario, "Funcionario") == 0) {
+        novoUsuario.limiteEmprestimos = 8;
+    } else {
+        novoUsuario.limiteEmprestimos = 4;
+    }
+
+    usuarios.usuarios[usuarios.total] = novoUsuario;
+    usuarios.total;
+
+    printf("\nUsuario cadastrado com sucesso! ID: %d\n", novoUsuario.id);
 }
 
 void emprestarLivro() {
@@ -145,43 +184,25 @@ void reservarLivro() {
 }
 
 void exibirCatalogo(Catalogo catalogo) {
-    int i;
-    printf("============= Catalogo =============\n");
-    for (i = 0; i < catalogo.tamanho; i++)
-        printf("NOME: %s", catalogo.livros[i].titulo);
-    printf("\n============= Fim Catalogo =============\n");
+     // exibir catalogo
 }
 
 void ExibirLivro(Livro livro) {
-    printf("============== Livro ================");
-    printf("IDENTIFICADOR: %d\n", livro.identifcador);
-    printf("NOME: %s\n", livro.titulo);
-    printf("ISBN: %d\n", livro.isbn);
-    printf("EDICAO: %s\n", livro.edicao);
-    printf("IMPRENTA: %s\n", livro.imprenta);
-    printf("MATERIAL: %s\n", livro.material);
-    
-    printf("Exemplares: ");
-    for (int i = 1; i <= livro.numExemplares; i++)
-    {
-        printf("============== Livro ================");
-        printf("IDENTIFICADOR: %d\n", livro.identifcador);
-        printf("TITULO: %s\n", livro.titulo);
-        printf("ISBN: %d\n", livro.isbn);
-        printf("EDICAO: %s\n", livro.edicao);
-        printf("IMPRENTA: %s\n", livro.imprenta);
-        printf("MATERIAL: %s\n", livro.material);
-    }
+    // exibir livro
 }
 
 int main() {
+    usuarios.total = 0;
+    catalogo.total = 0;
+    exemplares.total = 0;
+    historico.total = 0;
+    reservas.total = 0;
+
+    printf("=============================================\n");
+    printf("SISTEMA DE BIBLIOTECA\n");
+    printf("=============================================\n");
+
     int opcao = -1;
-    Catalogo catalogo;
-    Livro livro;
-    Usuarios listaUsuarios;
-    Usuario usuario;
-    catalogo.tamanho = 0;
-    listaUsuarios.tamanho = 0;
     while(opcao!=8) {
         printf("===================== MENU =====================\n");
         printf("1 - Exibir Catalogo\n");
@@ -197,58 +218,8 @@ int main() {
         getchar();
 
         switch (opcao) {
-            case 1:
-                exibirCatalogo(catalogo);
-                break;
-            case 2:
-                LerLivro(&livro);
-                catalogo.livros[catalogo.tamanho] = livro;
-                catalogo.tamanho++;
-                break;
             case 3:
-                LerUsuario(&usuario);
-                usuario.idUsuario = listaUsuarios.tamanho;
-                listaUsuarios.usuarios[listaUsuarios.tamanho] = usuario;
-                listaUsuarios.tamanho++;
-
-                printf("============== Usuario ================");
-                printf("IDENTIFICADOR: %d\n", usuario.idUsuario);
-                printf("NOME: %s\n", usuario.nome);
-                printf("EMAIL: %s\n", usuario.email);
-                printf("CPF: %s\n", usuario.cpf);
-                printf("LIMITE DE EMPRESTIMOS: %d\n", usuario.limiteEmprestimos);
-                break;
-            case 4:
-                break;
-            case 5:
-                break;
-            case 6:
-                break;
-            case 7:
-                char titulo[MAX_STR];
-                printf("Entre o titulo do livro que deseja buscar: ");
-                fgets(titulo, MAX_STR, stdin);
-
-                /*
-                int posicao = 0;
-                for (int i = 0; i < strlen(titulo); i++) {
-                    if (titulo[i] == ' ') continue;
-                    titulo[posicao] = titulo[i];
-                    posicao++;
-                }
-                strupr(titulo);
-                printf("%s", titulo);
-                */
-               printf("%d", titulo);
-                int i = 0;
-                while (i<catalogo.tamanho) {
-                    if (catalogo.livros[i].titulo != titulo)
-                        printf("Livro nao encontrado\n");
-                       else ExibirLivro(catalogo.livros[i]);
-                    printf("%d", i);
-                    printf("%d", catalogo.livros[i].titulo);
-                    i++;
-                }
+                cadastrarUsuario();
                 break;
         }
     }
