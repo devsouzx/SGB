@@ -316,6 +316,28 @@ void emprestarLivro() {
 
     if (livro->disponiveis <= 0) {
         printf("Nenhum exemplar disponivel para este livro!\n");
+        
+        // perguntar se deseja tentar reserva
+        printf("Deseja tentar fazer uma reserva para este livro? (S/N): ");
+        char resposta[4];
+        if (fgets(resposta, sizeof(resposta), stdin) == NULL) return;
+        if (resposta[0] == 'S' || resposta[0] == 's') {
+            // antes de criar, pedir confirmação final
+            printf("\nVoce solicitou reservar o livro:\n");
+            printf("Usuario: %s", usuario->nome);
+            printf("Livro: %s", livro->titulo);
+            printf("Confirma a reserva? (S/N): ");
+            char confirma[4];
+            if (fgets(confirma, sizeof(confirma), stdin) == NULL) return;
+            if (confirma[0] == 'S' || confirma[0] == 's') {
+                extern void reservarLivroParaUsuario(Usuario *usuario, Livro *livro);
+                reservarLivroParaUsuario(usuario, livro);
+            } else {
+                printf("Reserva cancelada pelo usuario.\n");
+            }
+        } else {
+            printf("Operacao de reserva cancelada.\n");
+        }
         return;
     }
 
@@ -386,7 +408,119 @@ void emprestarLivro() {
     printf("Devolucao Prevista: %s\n", novo.dataDevolucaoPrevista);
 }
 
+static time_t parseDateString(const char *dateStr) {
+    if (dateStr == NULL || strlen(dateStr) < 8) return (time_t)0;
+    int d = 0, m = 0, y = 0;
+    if (sscanf(dateStr, "%d/%d/%d", &d, &m, &y) != 3) return (time_t)0;
+    struct tm tmv;
+    memset(&tmv, 0, sizeof(tmv));
+    tmv.tm_mday = d;
+    tmv.tm_mon = m - 1;
+    tmv.tm_year = y - 1900;
+    tmv.tm_hour = 12; // evitar problemas com horário de verão
+    return mktime(&tmv);
+}
 
+static void formatDateToString(time_t t, char *outBuf, size_t bufSize) {
+    if (outBuf == NULL || bufSize < 11) return;
+    struct tm *tmv = localtime(&t);
+    snprintf(outBuf, bufSize, "%02d/%02d/%04d", tmv->tm_mday, tmv->tm_mon + 1, tmv->tm_year + 1900);
+}
+
+static time_t addDaysToTime(time_t base, int days) {
+    return base + (time_t)days * 24 * 3600;
+}
+
+void reservarLivroParaUsuario(Usuario *usuario, Livro *livro) {
+    for (int i = 0; i < reservas.total; i++) {
+        Reserva r = reservas.reservas[i];
+        if (r.usuarioId == usuario->id && r.livroId == livro->id && r.status == 1) {
+            printf("Usuario ja possui uma reserva ativa para este livro.\n");
+            return;
+        }
+    }
+
+    if (reservas.total >= MAX_RESERVAS) {
+        printf("Limite de reservas atingido!\n");
+        return;
+    }
+
+    time_t now = time(NULL);
+
+    time_t lastLoanEnd = 0;
+
+    for (int i = 0; i < exemplares.total; i++) {
+        Exemplar ex = exemplares.exemplares[i];
+        if (ex.livroId == livro->id) {
+            if (ex.status == 0 && strlen(ex.dataDevolucao) > 0) {
+                time_t dt = parseDateString(ex.dataDevolucao);
+                if (dt > lastLoanEnd) lastLoanEnd = dt;
+            }
+        }
+    }
+
+    for (int i = 0; i < historico.total; i++) {
+        Emprestimo emp = historico.emprestimos[i];
+
+        int exIndex = -1;
+        for (int j = 0; j < exemplares.total; j++) {
+            if (exemplares.exemplares[j].id == emp.exemplarId) { exIndex = j; break; }
+        }
+        if (exIndex != -1 && exemplares.exemplares[exIndex].livroId == livro->id) {
+            if (strlen(emp.dataDevolucaoPrevista) > 0) {
+                time_t dt = parseDateString(emp.dataDevolucaoPrevista);
+                if (dt > lastLoanEnd) lastLoanEnd = dt;
+            }
+        }
+    }
+
+
+    time_t lastReserveEnd = 0;
+    for (int i = 0; i < reservas.total; i++) {
+        Reserva r = reservas.reservas[i];
+        if (r.livroId == livro->id && r.status == 1 && strlen(r.dataExpiracao) > 0) {
+            time_t dt = parseDateString(r.dataExpiracao);
+            if (dt > lastReserveEnd) lastReserveEnd = dt;
+        }
+    }
+
+
+    time_t start = now;
+    if (lastLoanEnd > start) start = lastLoanEnd;
+    if (lastReserveEnd > start) start = lastReserveEnd;
+
+    if (start == lastLoanEnd && lastLoanEnd != 0) {
+        start = addDaysToTime(start, 1);
+    }
+    if (start == lastReserveEnd && lastReserveEnd != 0) {
+        start = addDaysToTime(start, 1);
+    }
+
+    time_t expiration = addDaysToTime(start, 7);
+
+    Reserva novo;
+    novo.id = reservas.total;
+    novo.usuarioId = usuario->id;
+    novo.livroId = livro->id;
+    dataAtual(novo.dataReserva);
+    formatDateToString(expiration, novo.dataExpiracao, sizeof(novo.dataExpiracao));
+    novo.prioridade = 1;
+    novo.status = 1;
+
+    reservas.reservas[reservas.total++] = novo;
+
+    char inicioBuf[16];
+    formatDateToString(start, inicioBuf, sizeof(inicioBuf));
+    printf("\n=== RESERVA REGISTRADA COM SUCESSO ===\n");
+    printf("ID: %d\n", novo.id);
+    printf("Usuario: %s", usuario->nome);
+    printf("Livro: %s", livro->titulo);
+    printf("Data da Solicitacao: %s\n", novo.dataReserva);
+    printf("Inicio Previsto da Reserva: %s\n", inicioBuf);
+    printf("Data de Expiracao (fim da reserva): %s\n", novo.dataExpiracao);
+    printf("Prioridade: %d\n", novo.prioridade);
+    printf("Status: %s\n", novo.status == 1 ? "Ativa" : "Inativa");
+}
 
 void devolverLivro() {
     printf("ESPECIFIQUE O ID DO EMPRESTIMO A SER DEVOLVIDO: ");
@@ -445,15 +579,71 @@ void renovarLivro() {
     // implementar renovação do livro
 }
 
-void reservarLivro() {
-    // implementar reserva de livro
-}
-
 void exibirCatalogo(Catalogo catalogo) {
      // exibir catalogo
 }
 
-void ExibirLivro(int index) {
+void exibirEmprestimosEReservas(Usuario usuario) {
+    printf("\n=== SITUACAO DO USUARIO ===\n");
+    printf("Nome: %s", usuario.nome);
+    printf("CPF: %s", usuario.cpf);
+    printf("Limite de emprestimos: %d\n", usuario.limiteEmprestimos);
+    printf("Emprestimos ativos: %d\n", usuario.emprestimosAtivos);
+    printf("Espaco restante para emprestimos: %d\n", usuario.limiteEmprestimos - usuario.emprestimosAtivos);
+
+    // listar emprestimos ativos no historico
+    printf("\n-- Emprestimos Ativos --\n");
+    int encontrouEmp = 0;
+    for (int i = 0; i < historico.total; i++) {
+        Emprestimo emp = historico.emprestimos[i];
+        if (emp.usuarioId == usuario.id && emp.status == 1) {
+            // encontrar exemplar
+            Exemplar *ex = NULL;
+            for (int j = 0; j < exemplares.total; j++) {
+                if (exemplares.exemplares[j].id == emp.exemplarId) { ex = &exemplares.exemplares[j]; break; }
+            }
+            const char *titulo = "(titulo nao encontrado)\n";
+            char exemplarBuf[128] = "(exemplar nao encontrado)";
+            if (ex != NULL) {
+                strcpy(exemplarBuf, ex->numeroChamada);
+                for (int k = 0; k < catalogo.total; k++) {
+                    if (catalogo.livros[k].id == ex->livroId) { titulo = catalogo.livros[k].titulo; break; }
+                }
+            }
+            printf("ID Emprestimo: %d\n", emp.id);
+            printf("Livro: %s", titulo);
+            printf("Exemplar: %s\n", exemplarBuf);
+            printf("Data Emprestimo: %s\n", emp.dataEmprestimo);
+            printf("Devolucao Prevista: %s\n", emp.dataDevolucaoPrevista);
+            if (strlen(emp.dataDevolucaoReal) > 0) printf("Data Devolucao Real: %s\n", emp.dataDevolucaoReal);
+            printf("Renovacoes: %d | Status: %s\n\n", emp.renovacoes, emp.status == 1 ? "Ativo" : "Finalizado");
+            encontrouEmp = 1;
+        }
+    }
+    if (!encontrouEmp) printf("Nenhum emprestimo ativo encontrado para este usuario.\n");
+
+    // listar reservas ativas
+    printf("\n-- Reservas Ativas --\n");
+    int encontrouRes = 0;
+    for (int i = 0; i < reservas.total; i++) {
+        Reserva r = reservas.reservas[i];
+        if (r.usuarioId == usuario.id && r.status == 1) {
+            const char *titulo = "(titulo nao encontrado)\n";
+            for (int k = 0; k < catalogo.total; k++) {
+                if (catalogo.livros[k].id == r.livroId) { titulo = catalogo.livros[k].titulo; break; }
+            }
+            printf("ID Reserva: %d\n", r.id);
+            printf("Livro: %s", titulo);
+            printf("Data da Solicitacao: %s\n", r.dataReserva);
+            printf("Inicio Previsto / Data de Expiracao: %s\n", r.dataExpiracao);
+            printf("Prioridade: %d | Status: %s\n\n", r.prioridade, r.status == 1 ? "Ativa" : "Inativa");
+            encontrouRes = 1;
+        }
+    }
+    if (!encontrouRes) printf("Nenhuma reserva ativa encontrada para este usuario.\n");
+}
+
+void exibirLivro(int index) {
     Livro l = catalogo.livros[index];
 
     printf(
@@ -510,12 +700,56 @@ int main() {
         printf("5 - Devolver Livro\n");
         printf("6 - Renovar Livro\n");
         printf("7 - Buscar Livro\n");
+        printf("8 - Buscar Emprestimos e Reservas\n");
         printf("9 - Listar Usuarios\n");
         printf("10 - Buscar Usuario por CPF\n");
         printf("11 - Sair\n");
         printf("Entre opcao: ");
-        scanf("%d", &opcao);
-        getchar();
+        char opcaos[50];
+        fgets(opcaos, 50, stdin);
+        opcaos[strcspn(opcaos, "\n")] = '\0';
+
+        int num;
+        if (sscanf(opcaos, " %d", &num) == 1) {
+            opcao = num;
+        } else {
+            char lower[120];
+            int L = (int)strlen(opcaos);
+            for (int i = 0; i < L; i++) {
+                char c = opcaos[i];
+                if (c >= 'A' && c <= 'Z') lower[i] = c + ('a' - 'A');
+                else lower[i] = c;
+            }
+            lower[L] = '\0';
+
+            if (strstr(lower, "reservas") != NULL || strstr(lower, "emprestimos e reservas") != NULL || strstr(lower, "buscar emprestimos") != NULL) {
+                opcao = 8;
+            } else if (strstr(lower, "exibir catalogo") != NULL || (strstr(lower, "exibir") != NULL && strstr(lower, "catalogo") != NULL) || strstr(lower, "catalogo") != NULL) {
+                opcao = 1;
+            } else if (strstr(lower, "adicionar livro") != NULL || strstr(lower, "adicionar") != NULL) {
+                opcao = 2;
+            } else if (strstr(lower, "cadastrar usuario") != NULL || strstr(lower, "cadastrar") != NULL) {
+                opcao = 3;
+            } else if (strstr(lower, "devolver") != NULL) {
+                opcao = 5;
+            } else if (strstr(lower, "renovar") != NULL) {
+                opcao = 6;
+            } else if (strstr(lower, "buscar livro") != NULL || (strstr(lower, "buscar") != NULL && strstr(lower, "livro") != NULL) || strstr(lower, "livro") != NULL) {
+                opcao = 7;
+            } else if (strstr(lower, "listar usuarios") != NULL || strstr(lower, "listar") != NULL) {
+                opcao = 9;
+            } else if (strstr(lower, "buscar usuario") != NULL || strstr(lower, "cpf") != NULL) {
+                opcao = 10;
+            } else if (strstr(lower, "emprestimo") != NULL || strstr(lower, "realizar emprestimo") != NULL) {
+                opcao = 4;
+            } else if (strstr(lower, "sair") != NULL || strstr(lower, "exit") != NULL) {
+                opcao = 11;
+            } else {
+                printf("Opcao invalida. Tente novamente.\n");
+                opcao = -1;
+                continue;
+            }
+        }
 
         switch (opcao) {
             case 3: {
@@ -536,9 +770,22 @@ int main() {
                 fgets(titulo, 200, stdin);
                 int livroIndex = buscarLivro(titulo);
                 if (livroIndex != -1) {
-                    ExibirLivro(livroIndex);
+                    exibirLivro(livroIndex);
                 } else {
                     printf("Livro nao encontrado!\n");
+                }
+                break;
+            }
+            case 8:{
+                char cpf[15];
+                printf("CPF: ");
+                fgets(cpf, 15, stdin);
+                int index = buscarUsuarioPorCPF(cpf);
+                if (index != -1) {
+                    Usuario u = usuarios.usuarios[index];
+                    exibirEmprestimosEReservas(u);
+                } else {
+                    printf("Usuario nao encontrado!\n");
                 }
                 break;
             }
