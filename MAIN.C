@@ -391,13 +391,15 @@ int main() {
         getchar();
 
         switch (opcao) {
-            case 3:
+            case 3: {
                 cadastrarUsuario();
                 break;
-            case 4:
+            }
+            case 4:{
                 emprestarLivro();
                 break;
-            case 7:
+            }
+            case 7:{
                 char titulo[200];
                 printf("Titulo do Livro: ");
                 fgets(titulo, 200, stdin);
@@ -408,10 +410,12 @@ int main() {
                     printf("Livro nao encontrado!\n");
                 }
                 break;
-            case 9:
+            }
+            case 9:{
                 listarUsuarios();
                 break;
-            case 10:
+            }
+            case 10:{
                 char cpf[15];
                 printf("CPF: ");
                 fgets(cpf, 15, stdin);
@@ -426,6 +430,7 @@ int main() {
                     printf("Usuario nao encontrado!\n");
                 }
                 break;
+            }
         }
     }
 }
