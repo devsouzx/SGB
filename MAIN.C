@@ -319,65 +319,66 @@ void emprestarLivro() {
         return;
     }
 
-    // PROCURAR EXEMPLAR DISPONÍVEL
     int exemplarIndex = -1;
     for (int i = 0; i < exemplares.total; i++) {
         if (exemplares.exemplares[i].livroId == livro->id &&
             exemplares.exemplares[i].status == 1) {
-
             exemplarIndex = i;
             break;
         }
     }
 
     if (exemplarIndex == -1) {
-        printf("Nenhum exemplar disponível registrado no sistema.\n");
+        printf("Nenhum exemplar disponivel.\n");
         return;
     }
 
     Exemplar *ex = &exemplares.exemplares[exemplarIndex];
 
     if (historico.total >= MAX_EMPRESTIMOS) {
-        printf("Limite de historico de emprestimos atingido!\n");
+        printf("Limite de historico atingido!\n");
         return;
     }
 
     Emprestimo novo;
 
+    // ID correto: igual à posição no vetor
     novo.id = historico.total;
+
     novo.usuarioId = usuario->id;
     novo.exemplarId = ex->id;
 
     dataAtual(novo.dataEmprestimo);
 
-    // PREVER DATA DA DEVOLUÇÃO (padrão: +7 dias)
+    // calcular devolução prevista (7 dias)
     time_t t = time(NULL);
-    t += 7 * 24 * 3600;  // 7 dias
+    t += 7 * 24 * 3600;
     struct tm tm = *localtime(&t);
     sprintf(novo.dataDevolucaoPrevista, "%02d/%02d/%04d",
             tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
 
-    strcpy(novo.dataDevolucaoReal, ""); // ainda não devolvido
+    strcpy(novo.dataDevolucaoReal, "");
     novo.renovacoes = 0;
-    novo.status = 1;   // ativo
+    novo.status = 1;
     novo.multa = 0.0;
 
-    // ADICIONAR AO HISTÓRICO
-    historico.emprestimos[historico.total++] = novo;
+    // SALVAR O EMPRÉSTIMO NO HISTÓRICO NA POSIÇÃO CERTA
+    historico.emprestimos[historico.total] = novo;
 
-    // ATUALIZAR EXEMPLAR
-    ex->status = 0; // não disponível
+    // AGORA SIM, INCREMENTA
+    historico.total++;
+
+    // ATUALIZAÇÕES
+    ex->status = 0;
     ex->usuarioId = usuario->id;
     strcpy(ex->dataEmprestimo, novo.dataEmprestimo);
     strcpy(ex->dataDevolucao, novo.dataDevolucaoPrevista);
 
-    // ATUALIZAR USUÁRIO
     usuario->emprestimosAtivos++;
-
-    // ATUALIZAR LIVRO
     livro->disponiveis--;
 
     printf("\n=== EMPRESTIMO REGISTRADO COM SUCESSO ===\n");
+    printf("ID DO EMPRESTIMO: %d\n", novo.id);
     printf("Usuario: %s", usuario->nome);
     printf("Livro: %s", livro->titulo);
     printf("Exemplar: %s\n", ex->numeroChamada);
@@ -386,9 +387,59 @@ void emprestarLivro() {
 }
 
 
+
 void devolverLivro() {
-    // implementar devuloução de livro
+    printf("ESPECIFIQUE O ID DO EMPRESTIMO A SER DEVOLVIDO: ");
+    int emprestimoId;
+    scanf("%d", &emprestimoId);
+    getchar();
+
+    // Verificar se o ID é válido
+    if (emprestimoId < 0 || emprestimoId >= historico.total) {
+        printf("Emprestimo nao encontrado!\n");
+        return;
+    }
+
+    Emprestimo *emp = &historico.emprestimos[emprestimoId];
+
+    // Já devolvido?
+    if (emp->status != 1) {
+        printf("Este emprestimo ja foi devolvido!\n");
+        return;
+    }
+
+    // Recuperar dados associados
+    Usuario *usuario = &usuarios.usuarios[emp->usuarioId];
+    Exemplar *ex = &exemplares.exemplares[emp->exemplarId];
+    Livro *livro = &catalogo.livros[ex->livroId];
+
+    // Registrar data de devolução real
+    dataAtual(emp->dataDevolucaoReal);
+
+    // Atualizar empréstimo
+    emp->status = 0;  // concluído
+
+    // Liberar exemplar
+    ex->status = 1;  // disponível
+    ex->usuarioId = -1;
+    strcpy(ex->dataEmprestimo, "");
+    strcpy(ex->dataDevolucao, "");
+
+    // Atualizar usuário
+    if (usuario->emprestimosAtivos > 0)
+        usuario->emprestimosAtivos--;
+
+    // Atualizar livro
+    livro->disponiveis++;
+
+    printf("\n=== DEVOLUCAO CONCLUIDA ===\n");
+    printf("Emprestimo ID: %d\n", emp->id);
+    printf("Livro: %s", livro->titulo);
+    printf("Exemplar: %s\n", ex->numeroChamada);
+    printf("Usuario: %s", usuario->nome);
+    printf("Data da devolucao: %s\n", emp->dataDevolucaoReal);
 }
+
 
 void renovarLivro() {
     // implementar renovação do livro
@@ -473,6 +524,10 @@ int main() {
             }
             case 4:{
                 emprestarLivro();
+                break;
+            }
+            case 5:{
+                devolverLivro();
                 break;
             }
             case 7:{
