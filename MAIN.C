@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <strings.h>
+#include <string.h>
 #include <time.h>
 
 #define MAX_USUARIOS 1000
@@ -7,6 +7,83 @@
 #define MAX_EXEMPLARES 10000
 #define MAX_EMPRESTIMOS 5000
 #define MAX_RESERVAS 2000
+
+#define USUARIO_TESTE { \
+    0, \
+    "Usuario Teste\n", \
+    "00000000000\n", \
+    "teste@exemplo.com\n", \
+    "11999999999\n", \
+    "Rua Exemplo, 123\n", \
+    "Aluno\n", \
+    "20250001\n", \
+    1, \
+    4, \
+    0, \
+    "01/01/2025", \
+    0.0 \
+}
+
+// Livro de teste
+#define LIVRO_TESTE { \
+    0, \
+    9781234567890LL, \
+    "Livro Teste\n", \
+    "Autor Desconhecido\n", \
+    "Editora Teste\n", \
+    "Sao Paulo\n", \
+    2025, \
+    1, \
+    "200 p.\n", \
+    "Serie Teste\n", \
+    "Nenhuma nota\n", \
+    "Assunto Teste\n", \
+    "CDD 123\n", \
+    "Portugues\n", \
+    "Impresso\n", \
+    1, \
+    1, \
+    "01/01/2025" \
+}
+
+// Exemplar de teste
+#define EXEMPLAR_TESTE { \
+    0, \
+    0, \
+    "CHAM-001\n", \
+    "Estante A1\n", \
+    "Vol. 1\n", \
+    "Fisico\n", \
+    1, \
+    -1, \
+    "", \
+    "", \
+    "Biblioteca Central\n" \
+}
+
+// Emprestimo de teste
+#define EMPRESTIMO_TESTE { \
+    0, \
+    0, \
+    0, \
+    "01/01/2025", \
+    "10/01/2025", \
+    "", \
+    0, \
+    1, \
+    0.0 \
+}
+
+// Reserva de teste
+#define RESERVA_TESTE { \
+    0, \
+    0, \
+    0, \
+    "01/01/2025", \
+    "05/01/2025", \
+    1, \
+    1 \
+}
 
 typedef struct {
     int id;
@@ -145,7 +222,7 @@ void cadastrarUsuario() {
     fgets(novoUsuario.cpf, 15, stdin);
     
     printf("Email: ");
-    fgets(novoUsuario.email, 200, stdin);
+    fgets(novoUsuario.email, 100, stdin);
     
     printf("Telefone: ");
     fgets(novoUsuario.telefone, 20, stdin);
@@ -185,8 +262,52 @@ int buscarUsuarioPorCPF(char *cpf) {
     return -1;
 }
 
+int buscarLivro(char *titulo) {
+    char busca[200];
+    strcpy(busca, titulo);
+
+    // remover \n do fgets
+    busca[strcspn(busca, "\n")] = '\0';
+
+    for (int i = 0; i < catalogo.total; i++) {
+        char tituloLivro[200];
+        strcpy(tituloLivro, catalogo.livros[i].titulo);
+        tituloLivro[strcspn(tituloLivro, "\n")] = '\0';
+
+        if (strcasecmp(tituloLivro, busca) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+
 void emprestarLivro() {
-    // implementar emprestimo de livro
+    printf("=== INSIRA O CPF DO USUARIO ===\n");
+    char cpf[15];
+    fgets(cpf, 15, stdin);
+    int userIndex = buscarUsuarioPorCPF(cpf);
+    if (userIndex == -1) {
+        printf("Usuario nao encontrado!\n");
+        return;
+    }
+    Usuario usuario = usuarios.usuarios[userIndex];
+    
+    if (usuario.emprestimosAtivos >= usuario.limiteEmprestimos) {
+        printf("Limite de emprestimos atingido para este usuario!\n");
+        return;
+    }
+    else {
+        printf("Usuario %s pode pegar emprestado mais livros.\n", usuario.nome);
+        printf("Qual livro deseja pegar emprestado?\n");
+        char titulo[200];
+        fgets(titulo, 200, stdin);
+        int livroIndex = buscarLivro(titulo);
+        if (livroIndex == -1) {
+            printf("Livro nao encontrado!\n");
+            return;
+        }
+    }
 }
 
 void devolverLivro() {
@@ -205,9 +326,35 @@ void exibirCatalogo(Catalogo catalogo) {
      // exibir catalogo
 }
 
-void ExibirLivro(Livro livro) {
-    // exibir livro
+void ExibirLivro(int index) {
+    Livro l = catalogo.livros[index];
+
+    printf(
+        "ID: %d\n"
+        "ISBN: %lld\n"
+        "Título: %s\n"
+        "Autor: %s\n"
+        "Editora: %s\n"
+        "Local de Publicação: %s\n"
+        "Ano de Publicação: %d\n"
+        "Edição: %d\n"
+        "Descrição Física: %s\n"
+        "Série: %s\n"
+        "Notas: %s\n"
+        "Assunto: %s\n"
+        "Classificação: %s\n"
+        "Idioma: %s\n"
+        "Tipo do Material: %s\n"
+        "Total de Exemplares: %d\n"
+        "Disponíveis: %d\n"
+        "Data de Cadastro: %s\n",
+        l.id, l.isbn, l.titulo, l.autor, l.editora, l.localPublicacao,
+        l.anoPublicacao, l.edicao, l.descricaoFisica, l.serie, l.notas,
+        l.assunto, l.classificacao, l.idioma, l.tipoMaterial,
+        l.totalExemplares, l.disponiveis, l.dataCadastro
+    );
 }
+
 
 int main() {
     usuarios.total = 0;
@@ -215,6 +362,12 @@ int main() {
     exemplares.total = 0;
     historico.total = 0;
     reservas.total = 0;
+
+    usuarios.usuarios[usuarios.total++] = (Usuario) USUARIO_TESTE;
+    catalogo.livros[catalogo.total++]    = (Livro)   LIVRO_TESTE;
+    exemplares.exemplares[exemplares.total++] = (Exemplar) EXEMPLAR_TESTE;
+    historico.emprestimos[historico.total++] = (Emprestimo) EMPRESTIMO_TESTE;
+    reservas.reservas[reservas.total++] = (Reserva) RESERVA_TESTE;
 
     printf("=============================================\n");
     printf("SISTEMA DE BIBLIOTECA\n");
@@ -240,6 +393,20 @@ int main() {
         switch (opcao) {
             case 3:
                 cadastrarUsuario();
+                break;
+            case 4:
+                emprestarLivro();
+                break;
+            case 7:
+                char titulo[200];
+                printf("Titulo do Livro: ");
+                fgets(titulo, 200, stdin);
+                int livroIndex = buscarLivro(titulo);
+                if (livroIndex != -1) {
+                    ExibirLivro(livroIndex);
+                } else {
+                    printf("Livro nao encontrado!\n");
+                }
                 break;
             case 9:
                 listarUsuarios();
