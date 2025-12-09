@@ -286,29 +286,105 @@ void emprestarLivro() {
     printf("=== INSIRA O CPF DO USUARIO ===\n");
     char cpf[15];
     fgets(cpf, 15, stdin);
+
     int userIndex = buscarUsuarioPorCPF(cpf);
     if (userIndex == -1) {
         printf("Usuario nao encontrado!\n");
         return;
     }
-    Usuario usuario = usuarios.usuarios[userIndex];
-    
-    if (usuario.emprestimosAtivos >= usuario.limiteEmprestimos) {
+
+    Usuario *usuario = &usuarios.usuarios[userIndex];
+
+    if (usuario->emprestimosAtivos >= usuario->limiteEmprestimos) {
         printf("Limite de emprestimos atingido para este usuario!\n");
         return;
     }
-    else {
-        printf("Usuario %s pode pegar emprestado mais livros.\n", usuario.nome);
-        printf("Qual livro deseja pegar emprestado?\n");
-        char titulo[200];
-        fgets(titulo, 200, stdin);
-        int livroIndex = buscarLivro(titulo);
-        if (livroIndex == -1) {
-            printf("Livro nao encontrado!\n");
-            return;
+
+    printf("Usuario %s pode pegar emprestado mais livros.\n", usuario->nome);
+    printf("Qual livro deseja pegar emprestado?\n");
+
+    char titulo[200];
+    fgets(titulo, 200, stdin);
+
+    int livroIndex = buscarLivro(titulo);
+    if (livroIndex == -1) {
+        printf("Livro nao encontrado!\n");
+        return;
+    }
+
+    Livro *livro = &catalogo.livros[livroIndex];
+
+    if (livro->disponiveis <= 0) {
+        printf("Nenhum exemplar disponivel para este livro!\n");
+        return;
+    }
+
+    // PROCURAR EXEMPLAR DISPONÍVEL
+    int exemplarIndex = -1;
+    for (int i = 0; i < exemplares.total; i++) {
+        if (exemplares.exemplares[i].livroId == livro->id &&
+            exemplares.exemplares[i].status == 1) {
+
+            exemplarIndex = i;
+            break;
         }
     }
+
+    if (exemplarIndex == -1) {
+        printf("Nenhum exemplar disponível registrado no sistema.\n");
+        return;
+    }
+
+    Exemplar *ex = &exemplares.exemplares[exemplarIndex];
+
+    if (historico.total >= MAX_EMPRESTIMOS) {
+        printf("Limite de historico de emprestimos atingido!\n");
+        return;
+    }
+
+    Emprestimo novo;
+
+    novo.id = historico.total;
+    novo.usuarioId = usuario->id;
+    novo.exemplarId = ex->id;
+
+    dataAtual(novo.dataEmprestimo);
+
+    // PREVER DATA DA DEVOLUÇÃO (padrão: +7 dias)
+    time_t t = time(NULL);
+    t += 7 * 24 * 3600;  // 7 dias
+    struct tm tm = *localtime(&t);
+    sprintf(novo.dataDevolucaoPrevista, "%02d/%02d/%04d",
+            tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
+
+    strcpy(novo.dataDevolucaoReal, ""); // ainda não devolvido
+    novo.renovacoes = 0;
+    novo.status = 1;   // ativo
+    novo.multa = 0.0;
+
+    // ADICIONAR AO HISTÓRICO
+    historico.emprestimos[historico.total++] = novo;
+
+    // ATUALIZAR EXEMPLAR
+    ex->status = 0; // não disponível
+    ex->usuarioId = usuario->id;
+    strcpy(ex->dataEmprestimo, novo.dataEmprestimo);
+    strcpy(ex->dataDevolucao, novo.dataDevolucaoPrevista);
+
+    // ATUALIZAR USUÁRIO
+    usuario->emprestimosAtivos++;
+
+    // ATUALIZAR LIVRO
+    livro->disponiveis--;
+
+    printf("\n=== EMPRESTIMO REGISTRADO COM SUCESSO ===\n");
+    printf("Usuario: %s", usuario->nome);
+    printf("Livro: %s", livro->titulo);
+    printf("Exemplar: %s\n", ex->numeroChamada);
+    printf("Data Emprestimo: %s\n", novo.dataEmprestimo);
+    printf("Devolucao Prevista: %s\n", novo.dataDevolucaoPrevista);
 }
+
 
 void devolverLivro() {
     // implementar devuloução de livro
