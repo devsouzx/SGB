@@ -107,7 +107,6 @@ typedef struct {
     int total;
 } ListaReservas;
 
-// iniciar variaveis globais
 ListaUsuarios usuarios = {0};
 Catalogo catalogo = {0};
 ListaExemplares exemplares = {0};
@@ -115,9 +114,8 @@ HistoricoEmprestimos historico = {0};
 ListaReservas reservas = {0};
 
 void dataAtual(char *data) {
-    time_t t = time(NULL);           // 1. Pegar tempo atual do sistema
-    struct tm tm = *localtime(&t);   // 2. Converter para struct
-    // 3. Formatar DD/MM/AAAA
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
     sprintf(data, "%02d/%02d/%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
 }
 
@@ -192,7 +190,7 @@ void adicionarExemplarAoLivro(int livroId, int quantidade) {
         printf("Suporte (Fisico/Digital): ");
         fgets(novoEx.suporte, 20, stdin);
         
-        novoEx.status = 1; // disponível
+        novoEx.status = 1;
         novoEx.usuarioId = -1;
         strcpy(novoEx.dataEmprestimo, "");
         strcpy(novoEx.dataDevolucao, "");
@@ -263,7 +261,6 @@ void adicionarLivro() {
     printf("Tipo de Material (ex: Impresso, Digital): ");
     fgets(novoLivro.tipoMaterial, 50, stdin);
 
-    // ler total de exemplares uma vez e usar para criar exemplares
     printf("Total de Exemplares: ");
     scanf("%d", &novoLivro.totalExemplares);
     getchar();
@@ -275,7 +272,6 @@ void adicionarLivro() {
 
     printf("\nLivro cadastrado com sucesso! ID: %d\n", novoLivro.id);
 
-    // criar automaticamente os exemplares com base no total informado
     if (novoLivro.totalExemplares > 0) {
         printf("Cadastrando %d exemplares para este livro.\n", novoLivro.totalExemplares);
         adicionarExemplarAoLivro(novoLivro.id, novoLivro.totalExemplares);
@@ -304,7 +300,6 @@ int buscarLivro(char *titulo) {
     char busca[200];
     strcpy(busca, titulo);
 
-    // remover \n do fgets
     busca[strcspn(busca, "\n")] = '\0';
 
     for (int i = 0; i < catalogo.total; i++) {
@@ -354,12 +349,10 @@ void emprestarLivro() {
     if (livro->disponiveis <= 0) {
         printf("Nenhum exemplar disponivel para este livro!\n");
         
-        // perguntar se deseja tentar reserva
         printf("Deseja tentar fazer uma reserva para este livro? (S/N): ");
         char resposta[4];
         if (fgets(resposta, sizeof(resposta), stdin) == NULL) return;
         if (resposta[0] == 'S' || resposta[0] == 's') {
-            // antes de criar, pedir confirmação final
             printf("\nVoce solicitou reservar o livro:\n");
             printf("Usuario: %s", usuario->nome);
             printf("Livro: %s", livro->titulo);
@@ -401,7 +394,6 @@ void emprestarLivro() {
 
     Emprestimo novo;
 
-    // ID correto: igual à posição no vetor
     novo.id = historico.total;
 
     novo.usuarioId = usuario->id;
@@ -409,7 +401,6 @@ void emprestarLivro() {
 
     dataAtual(novo.dataEmprestimo);
 
-    // calcular devolução prevista (7 dias)
     time_t t = time(NULL);
     t += 7 * 24 * 3600;
     struct tm tm = *localtime(&t);
@@ -421,13 +412,10 @@ void emprestarLivro() {
     novo.status = 1;
     novo.multa = 0.0;
 
-    // SALVAR O EMPRÉSTIMO NO HISTÓRICO NA POSIÇÃO CERTA
     historico.emprestimos[historico.total] = novo;
 
-    // AGORA SIM, INCREMENTA
     historico.total++;
 
-    // ATUALIZAÇÕES
     ex->status = 0;
     ex->usuarioId = usuario->id;
     strcpy(ex->dataEmprestimo, novo.dataEmprestimo);
@@ -454,7 +442,7 @@ static time_t parseDateString(const char *dateStr) {
     tmv.tm_mday = d;
     tmv.tm_mon = m - 1;
     tmv.tm_year = y - 1900;
-    tmv.tm_hour = 12; // evitar problemas com horário de verão
+    tmv.tm_hour = 12; 
     return mktime(&tmv);
 }
 
@@ -541,7 +529,6 @@ void reservarLivroParaUsuario(Usuario *usuario, Livro *livro) {
     novo.livroId = livro->id;
     dataAtual(novo.dataReserva);
     formatDateToString(expiration, novo.dataExpiracao, sizeof(novo.dataExpiracao));
-    // calcular prioridade: maior prioridade existente para este livro + 1
     int maxPrio = 0;
     for (int i = 0; i < reservas.total; i++) {
         Reserva rr = reservas.reservas[i];
@@ -573,7 +560,6 @@ void devolverLivro() {
     scanf("%d", &emprestimoId);
     getchar();
 
-    // Verificar se o ID é válido
     if (emprestimoId < 0 || emprestimoId >= historico.total) {
         printf("Emprestimo nao encontrado!\n");
         return;
@@ -581,43 +567,35 @@ void devolverLivro() {
 
     Emprestimo *emp = &historico.emprestimos[emprestimoId];
 
-    // Já devolvido?
     if (emp->status != 1) {
         printf("Este emprestimo ja foi devolvido!\n");
         return;
     }
 
-    // Recuperar dados associados
     Usuario *usuario = &usuarios.usuarios[emp->usuarioId];
     Exemplar *ex = &exemplares.exemplares[emp->exemplarId];
     Livro *livro = &catalogo.livros[ex->livroId];
 
-    // Registrar data de devolução real
     dataAtual(emp->dataDevolucaoReal);
 
-    // Atualizar empréstimo
-    emp->status = 0;  // concluído
+    emp->status = 0;
 
-    // Liberar exemplar
-    ex->status = 1;  // disponível
+    ex->status = 1;
     ex->usuarioId = -1;
     strcpy(ex->dataEmprestimo, "");
     strcpy(ex->dataDevolucao, "");
 
-    // Atualizar usuário
     if (usuario->emprestimosAtivos > 0)
         usuario->emprestimosAtivos--;
 
-    // Atualizar livro
     livro->disponiveis++;
 
-    // Após devolução, verificar reservas ativas para este livro
     int reservaIndex = -1;
     int melhorPrio = INT_MAX;
     for (int i = 0; i < reservas.total; i++) {
         Reserva rr = reservas.reservas[i];
         if (rr.livroId == livro->id && rr.status == 1) {
-            // verificar se o usuário da reserva pode receber o emprestimo
+
             int uidx = rr.usuarioId;
             if (uidx >= 0 && uidx < usuarios.total) {
                 Usuario *cand = &usuarios.usuarios[uidx];
@@ -632,7 +610,6 @@ void devolverLivro() {
     }
 
     if (reservaIndex != -1) {
-        // converter reserva em emprestimo para o exemplar retornado
         Reserva *rsel = &reservas.reservas[reservaIndex];
         Usuario *dest = &usuarios.usuarios[rsel->usuarioId];
 
@@ -652,17 +629,14 @@ void devolverLivro() {
 
             historico.emprestimos[historico.total++] = novoE;
 
-            // atualizar exemplar para emprestimo
             ex->status = 0;
             ex->usuarioId = dest->id;
             strcpy(ex->dataEmprestimo, novoE.dataEmprestimo);
             strcpy(ex->dataDevolucao, novoE.dataDevolucaoPrevista);
 
-            // atualizar usuario e livro
             dest->emprestimosAtivos++;
             livro->disponiveis--;
 
-            // marcar reserva como atendida (inativa)
             rsel->status = 0;
 
             printf("\n=== RESERVA CONVERTIDA EM EMPRESTIMO ===\n");
@@ -674,7 +648,6 @@ void devolverLivro() {
             printf("Data Emprestimo: %s\n", novoE.dataEmprestimo);
             printf("Devolucao Prevista: %s\n", novoE.dataDevolucaoPrevista);
         } else {
-            // histórico cheio; não é possível criar empréstimo automático
             printf("Historico cheio: nao foi possivel converter reserva em emprestimo.\n");
         }
     }
@@ -717,14 +690,12 @@ void exibirEmprestimosEReservas(Usuario usuario) {
     printf("Emprestimos ativos: %d\n", usuario.emprestimosAtivos);
     printf("Espaco restante para emprestimos: %d\n", usuario.limiteEmprestimos - usuario.emprestimosAtivos);
 
-    // listar emprestimos ativos no historico
     printf("\n-- Emprestimos Ativos --\n");
     int encontrouEmp = 0;
     int i;
     for (i = 0; i < historico.total; i++) {
         Emprestimo emp = historico.emprestimos[i];
         if (emp.usuarioId == usuario.id && emp.status == 1) {
-            // encontrar exemplar
             Exemplar *ex = NULL;
             int j;
             for (j = 0; j < exemplares.total; j++) {
@@ -751,7 +722,6 @@ void exibirEmprestimosEReservas(Usuario usuario) {
     }
     if (!encontrouEmp) printf("Nenhum emprestimo ativo encontrado para este usuario.\n");
 
-    // listar reservas ativas
     printf("\n-- Reservas Ativas --\n");
     int encontrouRes = 0;
     for (i = 0; i < reservas.total; i++) {
