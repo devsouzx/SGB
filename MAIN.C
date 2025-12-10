@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 #include <time.h>
 
 #define MAX_USUARIOS 1000
@@ -540,7 +541,15 @@ void reservarLivroParaUsuario(Usuario *usuario, Livro *livro) {
     novo.livroId = livro->id;
     dataAtual(novo.dataReserva);
     formatDateToString(expiration, novo.dataExpiracao, sizeof(novo.dataExpiracao));
-    novo.prioridade = 1;
+    // calcular prioridade: maior prioridade existente para este livro + 1
+    int maxPrio = 0;
+    for (int i = 0; i < reservas.total; i++) {
+        Reserva rr = reservas.reservas[i];
+        if (rr.livroId == livro->id && rr.status == 1) {
+            if (rr.prioridade > maxPrio) maxPrio = rr.prioridade;
+        }
+    }
+    novo.prioridade = maxPrio + 1;
     novo.status = 1;
 
     reservas.reservas[reservas.total++] = novo;
@@ -601,6 +610,74 @@ void devolverLivro() {
 
     // Atualizar livro
     livro->disponiveis++;
+
+    // Após devolução, verificar reservas ativas para este livro
+    int reservaIndex = -1;
+    int melhorPrio = INT_MAX;
+    for (int i = 0; i < reservas.total; i++) {
+        Reserva rr = reservas.reservas[i];
+        if (rr.livroId == livro->id && rr.status == 1) {
+            // verificar se o usuário da reserva pode receber o emprestimo
+            int uidx = rr.usuarioId;
+            if (uidx >= 0 && uidx < usuarios.total) {
+                Usuario *cand = &usuarios.usuarios[uidx];
+                if (cand->emprestimosAtivos < cand->limiteEmprestimos) {
+                    if (rr.prioridade < melhorPrio) {
+                        melhorPrio = rr.prioridade;
+                        reservaIndex = i;
+                    }
+                }
+            }
+        }
+    }
+
+    if (reservaIndex != -1) {
+        // converter reserva em emprestimo para o exemplar retornado
+        Reserva *rsel = &reservas.reservas[reservaIndex];
+        Usuario *dest = &usuarios.usuarios[rsel->usuarioId];
+
+        if (historico.total < MAX_EMPRESTIMOS) {
+            Emprestimo novoE;
+            novoE.id = historico.total;
+            novoE.usuarioId = dest->id;
+            novoE.exemplarId = ex->id;
+            dataAtual(novoE.dataEmprestimo);
+            time_t tt = time(NULL) + 7 * 24 * 3600;
+            struct tm ttm = *localtime(&tt);
+            sprintf(novoE.dataDevolucaoPrevista, "%02d/%02d/%04d", ttm.tm_mday, ttm.tm_mon + 1, ttm.tm_year + 1900);
+            strcpy(novoE.dataDevolucaoReal, "");
+            novoE.renovacoes = 0;
+            novoE.status = 1;
+            novoE.multa = 0.0f;
+
+            historico.emprestimos[historico.total++] = novoE;
+
+            // atualizar exemplar para emprestimo
+            ex->status = 0;
+            ex->usuarioId = dest->id;
+            strcpy(ex->dataEmprestimo, novoE.dataEmprestimo);
+            strcpy(ex->dataDevolucao, novoE.dataDevolucaoPrevista);
+
+            // atualizar usuario e livro
+            dest->emprestimosAtivos++;
+            livro->disponiveis--;
+
+            // marcar reserva como atendida (inativa)
+            rsel->status = 0;
+
+            printf("\n=== RESERVA CONVERTIDA EM EMPRESTIMO ===\n");
+            printf("Reserva ID atendida: %d\n", rsel->id);
+            printf("Novo Emprestimo ID: %d\n", novoE.id);
+            printf("Usuario: %s", dest->nome);
+            printf("Livro: %s", livro->titulo);
+            printf("Exemplar: %s\n", ex->numeroChamada);
+            printf("Data Emprestimo: %s\n", novoE.dataEmprestimo);
+            printf("Devolucao Prevista: %s\n", novoE.dataDevolucaoPrevista);
+        } else {
+            // histórico cheio; não é possível criar empréstimo automático
+            printf("Historico cheio: nao foi possivel converter reserva em emprestimo.\n");
+        }
+    }
 
     printf("\n=== DEVOLUCAO CONCLUIDA ===\n");
     printf("Emprestimo ID: %d\n", emp->id);
