@@ -244,6 +244,76 @@ void cadastrarUsuario() {
     printf("\nUsuario cadastrado com sucesso! ID: %d\n", novoUsuario.id);
 }
 
+void adicionarLivro() {
+    if (catalogo.total >= MAX_LIVROS) {
+        printf("Limite de livros atingido!\n");
+        return;
+    }
+
+    Livro novoLivro;
+    novoLivro.id = catalogo.total;
+    novoLivro.disponiveis = 0;
+    dataAtual(novoLivro.dataCadastro);
+
+    printf("\n=== CADASTRO DE LIVRO ===\n");
+    
+    printf("Titulo: ");
+    fgets(novoLivro.titulo, 200, stdin);
+
+    printf("Autor: ");
+    fgets(novoLivro.autor, 100, stdin);
+
+    printf("Editora: ");
+    fgets(novoLivro.editora, 100, stdin);
+    
+    printf("ISBN: ");
+    scanf("%lld", &novoLivro.isbn);
+    getchar();
+
+    printf("Local de Publicacao: ");
+    fgets(novoLivro.localPublicacao, 100, stdin);
+    
+    printf("Ano de Publicacao: ");
+    scanf("%d", &novoLivro.anoPublicacao);
+    getchar();
+
+    printf("Edicao: ");
+    scanf("%d", &novoLivro.edicao);
+    getchar();
+
+    printf("Descricao Fisica (ex: 200 p.): ");
+    fgets(novoLivro.descricaoFisica, 100, stdin);
+
+    printf("Serie: ");
+    fgets(novoLivro.serie, 100, stdin);
+
+    printf("Notas: ");
+    fgets(novoLivro.notas, 500, stdin);
+
+    printf("Assunto: ");
+    fgets(novoLivro.assunto, 300, stdin);
+
+    printf("Classificacao (ex: CDD 123): ");
+    fgets(novoLivro.classificacao, 50, stdin);
+
+    printf("Idioma: ");
+    fgets(novoLivro.idioma, 30, stdin);
+
+    printf("Tipo de Material (ex: Impresso, Digital): ");
+    fgets(novoLivro.tipoMaterial, 50, stdin);
+
+    printf("Total de Exemplares: ");
+    scanf("%d", &novoLivro.totalExemplares);
+    getchar();
+
+    novoLivro.disponiveis = novoLivro.totalExemplares;
+
+    catalogo.livros[catalogo.total] = novoLivro;
+    catalogo.total++;
+
+    printf("\nLivro cadastrado com sucesso! ID: %d\n", novoLivro.id);
+}
+
 void listarUsuarios() {
     printf("\n=== LISTA DE USUARIOS (%d) ===\n", usuarios.total);
     for (int i = 0; i < usuarios.total; i++) {
@@ -280,7 +350,6 @@ int buscarLivro(char *titulo) {
     }
     return -1;
 }
-
 
 void emprestarLivro() {
     printf("=== INSIRA O CPF DO USUARIO ===\n");
@@ -574,13 +643,26 @@ void devolverLivro() {
     printf("Data da devolucao: %s\n", emp->dataDevolucaoReal);
 }
 
-
 void renovarLivro() {
     // implementar renovação do livro
 }
 
-void exibirCatalogo(Catalogo catalogo) {
-     // exibir catalogo
+void exibirCatalogo() {
+    printf("\n=== CATALOGO DA BIBLIOTECA ===\n");
+    if (catalogo.total == 0) {
+        printf("Nenhum livro cadastrado no catalogo.\n");
+        return;
+    }
+    
+    int i;
+    for (i = 0; i < catalogo.total; i++) {
+        Livro l = catalogo.livros[i];
+        printf("\n[%d] %s", i + 1, l.titulo);
+        printf("    Autor: %s", l.autor);
+        printf("    Editora: %s", l.editora);
+        printf("    Ano: %d | Exemplares: %d | Disponiveis: %d\n", l.anoPublicacao, l.totalExemplares, l.disponiveis);
+    }
+    printf("\n=== TOTAL DE LIVROS: %d ===\n\n", catalogo.total);
 }
 
 void exibirEmprestimosEReservas(Usuario usuario) {
@@ -594,19 +676,22 @@ void exibirEmprestimosEReservas(Usuario usuario) {
     // listar emprestimos ativos no historico
     printf("\n-- Emprestimos Ativos --\n");
     int encontrouEmp = 0;
-    for (int i = 0; i < historico.total; i++) {
+    int i;
+    for (i = 0; i < historico.total; i++) {
         Emprestimo emp = historico.emprestimos[i];
         if (emp.usuarioId == usuario.id && emp.status == 1) {
             // encontrar exemplar
             Exemplar *ex = NULL;
-            for (int j = 0; j < exemplares.total; j++) {
+            int j;
+            for (j = 0; j < exemplares.total; j++) {
                 if (exemplares.exemplares[j].id == emp.exemplarId) { ex = &exemplares.exemplares[j]; break; }
             }
             const char *titulo = "(titulo nao encontrado)\n";
             char exemplarBuf[128] = "(exemplar nao encontrado)";
             if (ex != NULL) {
                 strcpy(exemplarBuf, ex->numeroChamada);
-                for (int k = 0; k < catalogo.total; k++) {
+                int k;
+                for (k = 0; k < catalogo.total; k++) {
                     if (catalogo.livros[k].id == ex->livroId) { titulo = catalogo.livros[k].titulo; break; }
                 }
             }
@@ -625,11 +710,12 @@ void exibirEmprestimosEReservas(Usuario usuario) {
     // listar reservas ativas
     printf("\n-- Reservas Ativas --\n");
     int encontrouRes = 0;
-    for (int i = 0; i < reservas.total; i++) {
+    for (i = 0; i < reservas.total; i++) {
         Reserva r = reservas.reservas[i];
         if (r.usuarioId == usuario.id && r.status == 1) {
             const char *titulo = "(titulo nao encontrado)\n";
-            for (int k = 0; k < catalogo.total; k++) {
+            int k;
+            for (k = 0; k < catalogo.total; k++) {
                 if (catalogo.livros[k].id == r.livroId) { titulo = catalogo.livros[k].titulo; break; }
             }
             printf("ID Reserva: %d\n", r.id);
@@ -671,7 +757,6 @@ void exibirLivro(int index) {
         l.totalExemplares, l.disponiveis, l.dataCadastro
     );
 }
-
 
 int main() {
     usuarios.total = 0;
@@ -715,7 +800,8 @@ int main() {
         } else {
             char lower[120];
             int L = (int)strlen(opcaos);
-            for (int i = 0; i < L; i++) {
+            int i;
+            for (i = 0; i < L; i++) {
                 char c = opcaos[i];
                 if (c >= 'A' && c <= 'Z') lower[i] = c + ('a' - 'A');
                 else lower[i] = c;
@@ -752,6 +838,14 @@ int main() {
         }
 
         switch (opcao) {
+            case 1: {
+                exibirCatalogo();
+                break;
+            }
+            case 2: {
+                adicionarLivro();
+                break;
+            }
             case 3: {
                 cadastrarUsuario();
                 break;
