@@ -244,6 +244,43 @@ void cadastrarUsuario() {
     printf("\nUsuario cadastrado com sucesso! ID: %d\n", novoUsuario.id);
 }
 
+void adicionarExemplarAoLivro(int livroId, int quantidade) {
+    if (exemplares.total + quantidade > MAX_EXEMPLARES) {
+        printf("Nao ha espaco para tantos exemplares!\n");
+        return;
+    }
+
+    for (int i = 0; i < quantidade; i++) {
+        Exemplar novoEx;
+        novoEx.id = exemplares.total;
+        novoEx.livroId = livroId;
+        
+        printf("Exemplar %d:\n", i + 1);
+        printf("Numero de Chamada: ");
+        fgets(novoEx.numeroChamada, 50, stdin);
+        
+        printf("Localizacao: ");
+        fgets(novoEx.localizacao, 100, stdin);
+        
+        printf("Volume: ");
+        fgets(novoEx.volume, 30, stdin);
+        
+        printf("Suporte (Fisico/Digital): ");
+        fgets(novoEx.suporte, 20, stdin);
+        
+        novoEx.status = 1; // disponível
+        novoEx.usuarioId = -1;
+        strcpy(novoEx.dataEmprestimo, "");
+        strcpy(novoEx.dataDevolucao, "");
+        
+        printf("Biblioteca: ");
+        fgets(novoEx.biblioteca, 100, stdin);
+        
+        exemplares.exemplares[exemplares.total++] = novoEx;
+        printf("Exemplar %d adicionado com sucesso!\n\n", i + 1);
+    }
+}
+
 void adicionarLivro() {
     if (catalogo.total >= MAX_LIVROS) {
         printf("Limite de livros atingido!\n");
@@ -302,6 +339,7 @@ void adicionarLivro() {
     printf("Tipo de Material (ex: Impresso, Digital): ");
     fgets(novoLivro.tipoMaterial, 50, stdin);
 
+    // ler total de exemplares uma vez e usar para criar exemplares
     printf("Total de Exemplares: ");
     scanf("%d", &novoLivro.totalExemplares);
     getchar();
@@ -312,6 +350,12 @@ void adicionarLivro() {
     catalogo.total++;
 
     printf("\nLivro cadastrado com sucesso! ID: %d\n", novoLivro.id);
+
+    // criar automaticamente os exemplares com base no total informado
+    if (novoLivro.totalExemplares > 0) {
+        printf("Cadastrando %d exemplares para este livro.\n", novoLivro.totalExemplares);
+        adicionarExemplarAoLivro(novoLivro.id, novoLivro.totalExemplares);
+    }
 }
 
 void listarUsuarios() {
