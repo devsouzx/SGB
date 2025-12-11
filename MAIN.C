@@ -664,7 +664,6 @@ void renovarLivro() {
     printf("\n=== RENOVACAO DE LIVRO ===\n");
     printf("Informe o ID do Emprestimo que deseja renovar: ");
     
-    //verificacoes
     int empId;
     if (scanf("%d", &empId) != 1) {
         while(getchar() != '\n');
@@ -688,7 +687,8 @@ void renovarLivro() {
         printf("Limite de renovacoes atingido para este emprestimo (Max: 3).\n");
         return;
     }
-
+    
+    //verificar se há reserva ativa
     int exemplarIndex = -1;
     for(int i=0; i<exemplares.total; i++) {
         if(exemplares.exemplares[i].id == emp->exemplarId) {
@@ -696,55 +696,62 @@ void renovarLivro() {
             break;
         }
     }
+    
+    if (exemplarIndex == -1) {
+        printf("Erro interno: Exemplar associado nao encontrado.\n");
+        return;
+    }
 
-    if (exemplarIndex != -1) {
-        int livroId = exemplares.exemplares[exemplarIndex].livroId;
+    int livroId = exemplares.exemplares[exemplarIndex].livroId;
+    Livro *livro = &catalogo.livros[livroId];
+    Usuario *usuario = &usuarios.usuarios[emp->usuarioId];
         
-        for(int i=0; i<reservas.total; i++) {
-
-            if (reservas.reservas[i].livroId == livroId && reservas.reservas[i].status == 1) {
-                printf("NAO E POSSIVEL RENOVAR: Existe uma reserva ativa para este livro.\n");
-                printf("O livro deve ser devolvido na data prevista para atender a fila de espera.\n");
-                return;
-            }
+    for(int i=0; i<reservas.total; i++) {
+        if (reservas.reservas[i].livroId == livroId && reservas.reservas[i].status == 1) {
+            printf("NAO E POSSIVEL RENOVAR: Existe uma reserva ativa para este livro.\n");
+            printf("O livro deve ser devolvido na data prevista para atender a fila de espera.\n");
+            return;
         }
     }
 
-    // renovacao
-
+    // confirmação e pré-visualização
     time_t dataAtualDev = parseDateString(emp->dataDevolucaoPrevista);
-    
     time_t novaData = addDaysToTime(dataAtualDev, 7);
-    
-    formatDateToString(novaData, emp->dataDevolucaoPrevista, sizeof(emp->dataDevolucaoPrevista));
-    
-    emp->renovacoes++;
+    char novaDataStr[11];
+    formatDateToString(novaData, novaDataStr, sizeof(novaDataStr));
 
+    printf("\nVoce solicitou renovar o emprestimo:\n");
+    printf("ID do Emprestimo: %d\n", emp->id);
+    printf("Usuario: %s", usuario->nome);
+    printf("Livro: %s", livro->titulo);
+    printf("Devolucao Prevista ATUAL: %s\n", emp->dataDevolucaoPrevista);
+    printf("Renovacoes feitas: %d\n", emp->renovacoes);
+    printf("Nova Devolucao Prevista apos renovacao: %s\n", novaDataStr);
+    
+    printf("\nConfirma a renovacao? (S/N): ");
+    char confirma[4];
+    if (fgets(confirma, sizeof(confirma), stdin) == NULL) return;
+    if (confirma[0] != 'S' && confirma[0] != 's') {
+        printf("Renovacao cancelada pelo usuario.\n");
+        return;
+    }
+    
+
+    // efetuar renovação
+    strcpy(emp->dataDevolucaoPrevista, novaDataStr);
+    emp->renovacoes++;
+    
     if (exemplarIndex != -1) {
         strcpy(exemplares.exemplares[exemplarIndex].dataDevolucao, emp->dataDevolucaoPrevista);
     }
 
-    printf("\n=== SUCESSO! LIVRO RENOVADO ===\n");
+    // confirmação final
+    printf("\n=== RENOVACAO REGISTRADA COM SUCESSO ===\n");
+    printf("ID do Emprestimo: %d\n", emp->id);
+    printf("Usuario: %s", usuario->nome);
+    printf("Livro: %s", livro->titulo);
     printf("Nova Data de Devolucao: %s\n", emp->dataDevolucaoPrevista);
     printf("Total de renovacoes realizadas: %d\n", emp->renovacoes);
-}
-
-void exibirCatalogo() {
-    printf("\n=== CATALOGO DA BIBLIOTECA ===\n");
-    if (catalogo.total == 0) {
-        printf("Nenhum livro cadastrado no catalogo.\n");
-        return;
-    }
-    
-    int i;
-    for (i = 0; i < catalogo.total; i++) {
-        Livro l = catalogo.livros[i];
-        printf("\n[%d] %s", i + 1, l.titulo);
-        printf("    Autor: %s", l.autor);
-        printf("    Editora: %s", l.editora);
-        printf("    Ano: %d | Exemplares: %d | Disponiveis: %d\n", l.anoPublicacao, l.totalExemplares, l.disponiveis);
-    }
-    printf("\n=== TOTAL DE LIVROS: %d ===\n\n", catalogo.total);
 }
 
 void exibirEmprestimosEReservas(Usuario usuario) {
