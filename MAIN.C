@@ -3,6 +3,18 @@
 #include <limits.h>
 #include <time.h>
 
+// SGB - Sistema de Gerenciamento de Biblioteca
+// Henrique da Rocha Lima - 202505936 
+// João Emanuel Marinho Sousa - 202503299 
+// Lucas Barreto Dias - 202503302 
+// Thalma Gabriel Marques Coimbra - 202503310 
+// Thyago Divino Souza Siriano - 202503312
+// Data: 11/12/2025 
+// Curso: Bacharelado Engenharia de Software UFG
+// Materia: Algoritmos e Estruturas de dados
+// Professor: Edmundo Sergio Spoto
+// INF 2025
+
 #define MAX_USUARIOS 1000
 #define MAX_LIVROS 5000
 #define MAX_EXEMPLARES 10000
@@ -138,7 +150,7 @@ void cadastrarUsuario() {
         printf("Limite de usuarios atingido!\n");
         return;
     }
-
+    
     Usuario novoUsuario;
     novoUsuario.id = usuarios.total;
     novoUsuario.status = 1;
