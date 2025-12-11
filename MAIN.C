@@ -190,7 +190,6 @@ void cadastrarUsuario() {
     usuarios.total++;
 
     printf("\nUsuario cadastrado com sucesso! ID: %d\n", novoUsuario.id);
-    printf("CPF armazenado: '%s' (tamanho: %lu)\n", novoUsuario.cpf, strlen(novoUsuario.cpf));
 }
 
 void adicionarExemplarAoLivro(int livroId, int quantidade) {
@@ -309,8 +308,8 @@ void listarUsuarios() {
     printf("\n=== LISTA DE USUARIOS (%d) ===\n", usuarios.total);
     for (int i = 0; i < usuarios.total; i++) {
         Usuario u = usuarios.usuarios[i];
-        printf("ID: %d | Matricula: %s | Nome: %s | Tipo: %s | Emprestimos: %d/%d | cpf: %s\n",
-               u.id, u.matricula, u.nome, u.tipoUsuario, u.emprestimosAtivos, u.limiteEmprestimos, u.cpf);
+        printf("ID: %d | Matricula: %s | Nome: %s | Tipo: %s | Emprestimos: %d/%d\n",
+               u.id, u.matricula, u.nome, u.tipoUsuario, u.emprestimosAtivos, u.limiteEmprestimos);
     }
 }
 
