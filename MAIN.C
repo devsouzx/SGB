@@ -119,6 +119,18 @@ void dataAtual(char *data) {
     sprintf(data, "%02d/%02d/%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
 }
 
+int validarCPF(char *cpf) {
+    cpf[strcspn(cpf, "\n")] = '\0';
+    int digitos = 0;
+    for (int i = 0; cpf[i] != '\0'; i++) {
+        if (cpf[i] >= '0' && cpf[i] <= '9') {
+            digitos++;
+        }
+    }
+    if (digitos == 11) return 1;
+    else return 0;
+}
+
 void cadastrarUsuario() {
     if (usuarios.total >= MAX_USUARIOS) {
         printf("Limite de usuarios atingido!\n");
@@ -140,9 +152,16 @@ void cadastrarUsuario() {
     printf("Matricula: ");
     fgets(novoUsuario.matricula, 20, stdin);
 
-    printf("CPF: ");
-    fgets(novoUsuario.cpf, 15, stdin);
-    
+    while (1) {
+        printf("CPF: ");
+        fgets(novoUsuario.cpf, 15, stdin);
+        
+        if (validarCPF(novoUsuario.cpf) != 0) {
+            break;
+        }
+        printf("CPF invalido! Tente inserir CPF novamente:\n");
+    }
+
     printf("Email: ");
     fgets(novoUsuario.email, 100, stdin);
     
@@ -813,6 +832,24 @@ void exibirEmprestimosEReservas(Usuario usuario) {
         }
     }
     if (!encontrouRes) printf("Nenhuma reserva ativa encontrada para este usuario.\n");
+}
+
+void exibirCatalogo() {
+    printf("\n=== CATALOGO DA BIBLIOTECA ===\n");
+    if (catalogo.total == 0) {
+        printf("Nenhum livro cadastrado no catalogo.\n");
+        return;
+    }
+    
+    int i;
+    for (i = 0; i < catalogo.total; i++) {
+        Livro l = catalogo.livros[i];
+        printf("\n[%d] %s", i + 1, l.titulo);
+        printf("    Autor: %s", l.autor);
+        printf("    Editora: %s", l.editora);
+        printf("    Ano: %d | Exemplares: %d | Disponiveis: %d\n", l.anoPublicacao, l.totalExemplares, l.disponiveis);
+    }
+    printf("\n=== TOTAL DE LIVROS: %d ===\n\n", catalogo.total);
 }
 
 void exibirLivro(int index) {
