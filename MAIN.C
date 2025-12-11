@@ -661,7 +661,72 @@ void devolverLivro() {
 }
 
 void renovarLivro() {
-    // implementar renovação do livro
+    printf("\n=== RENOVACAO DE LIVRO ===\n");
+    printf("Informe o ID do Emprestimo que deseja renovar: ");
+    
+    //verificacoes
+    int empId;
+    if (scanf("%d", &empId) != 1) {
+        while(getchar() != '\n');
+        return;
+    }
+    getchar();
+   
+    if (empId < 0 || empId >= historico.total) {
+        printf("Emprestimo nao encontrado.\n");
+        return;
+    }
+
+    Emprestimo *emp = &historico.emprestimos[empId];
+
+    if (emp->status == 0) {
+        printf("Este emprestimo ja foi finalizado (devolvido).\n");
+        return;
+    }
+
+    if (emp->renovacoes >= 3) {
+        printf("Limite de renovacoes atingido para este emprestimo (Max: 3).\n");
+        return;
+    }
+
+    int exemplarIndex = -1;
+    for(int i=0; i<exemplares.total; i++) {
+        if(exemplares.exemplares[i].id == emp->exemplarId) {
+            exemplarIndex = i;
+            break;
+        }
+    }
+
+    if (exemplarIndex != -1) {
+        int livroId = exemplares.exemplares[exemplarIndex].livroId;
+        
+        for(int i=0; i<reservas.total; i++) {
+
+            if (reservas.reservas[i].livroId == livroId && reservas.reservas[i].status == 1) {
+                printf("NAO E POSSIVEL RENOVAR: Existe uma reserva ativa para este livro.\n");
+                printf("O livro deve ser devolvido na data prevista para atender a fila de espera.\n");
+                return;
+            }
+        }
+    }
+
+    // renovacao
+
+    time_t dataAtualDev = parseDateString(emp->dataDevolucaoPrevista);
+    
+    time_t novaData = addDaysToTime(dataAtualDev, 7);
+    
+    formatDateToString(novaData, emp->dataDevolucaoPrevista, sizeof(emp->dataDevolucaoPrevista));
+    
+    emp->renovacoes++;
+
+    if (exemplarIndex != -1) {
+        strcpy(exemplares.exemplares[exemplarIndex].dataDevolucao, emp->dataDevolucaoPrevista);
+    }
+
+    printf("\n=== SUCESSO! LIVRO RENOVADO ===\n");
+    printf("Nova Data de Devolucao: %s\n", emp->dataDevolucaoPrevista);
+    printf("Total de renovacoes realizadas: %d\n", emp->renovacoes);
 }
 
 void exibirCatalogo() {
@@ -864,6 +929,10 @@ int main() {
             }
             case 5:{
                 devolverLivro();
+                break;
+            }
+            case 6:{
+                renovarLivro();
                 break;
             }
             case 7:{
