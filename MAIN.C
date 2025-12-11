@@ -12,7 +12,7 @@
 typedef struct {
     int id;
     char nome[100];
-    char cpf[15];
+    char cpf[50];
     char email[100];
     char telefone[20];
     char endereco[200];
@@ -120,10 +120,12 @@ void dataAtual(char *data) {
 }
 
 int validarCPF(char *cpf) {
-    cpf[strcspn(cpf, "\n")] = '\0';
+    char temp[20];
+    strcpy(temp, cpf);
+    temp[strcspn(temp, "\n")] = '\0';
     int digitos = 0;
-    for (int i = 0; cpf[i] != '\0'; i++) {
-        if (cpf[i] >= '0' && cpf[i] <= '9') {
+    for (int i = 0; temp[i] != '\0'; i++) {
+        if (temp[i] >= '0' && temp[i] <= '9') {
             digitos++;
         }
     }
@@ -148,15 +150,17 @@ void cadastrarUsuario() {
     
     printf("Nome: ");
     fgets(novoUsuario.nome, 100, stdin);
+    novoUsuario.nome[strcspn(novoUsuario.nome, "\n")] = '\0';
 
     printf("Matricula: ");
     fgets(novoUsuario.matricula, 20, stdin);
+    novoUsuario.matricula[strcspn(novoUsuario.matricula, "\n")] = '\0';
 
     while (1) {
         printf("CPF: ");
-        fgets(novoUsuario.cpf, 15, stdin);
-        
+        fgets(novoUsuario.cpf, 50, stdin);
         if (validarCPF(novoUsuario.cpf) != 0) {
+            novoUsuario.cpf[strcspn(novoUsuario.cpf, "\n")] = '\0';
             break;
         }
         printf("CPF invalido! Tente inserir CPF novamente:\n");
@@ -164,12 +168,15 @@ void cadastrarUsuario() {
 
     printf("Email: ");
     fgets(novoUsuario.email, 100, stdin);
+    novoUsuario.email[strcspn(novoUsuario.email, "\n")] = '\0';
     
     printf("Telefone: ");
     fgets(novoUsuario.telefone, 20, stdin);
+    novoUsuario.telefone[strcspn(novoUsuario.telefone, "\n")] = '\0';
     
     printf("Tipo (Aluno/Professor/Funcionario): ");
     fgets(novoUsuario.tipoUsuario, 30, stdin);
+    novoUsuario.tipoUsuario[strcspn(novoUsuario.tipoUsuario, "\n")] = '\0';
 
     if (strcasecmp(novoUsuario.tipoUsuario, "Professor") == 0) {
         novoUsuario.limiteEmprestimos = 10;
@@ -183,6 +190,7 @@ void cadastrarUsuario() {
     usuarios.total++;
 
     printf("\nUsuario cadastrado com sucesso! ID: %d\n", novoUsuario.id);
+    printf("CPF armazenado: '%s' (tamanho: %lu)\n", novoUsuario.cpf, strlen(novoUsuario.cpf));
 }
 
 void adicionarExemplarAoLivro(int livroId, int quantidade) {
@@ -301,14 +309,18 @@ void listarUsuarios() {
     printf("\n=== LISTA DE USUARIOS (%d) ===\n", usuarios.total);
     for (int i = 0; i < usuarios.total; i++) {
         Usuario u = usuarios.usuarios[i];
-        printf("ID: %d | Matricula: %s | Nome: %s | Tipo: %s | Emprestimos: %d/%d\n",
-               u.id, u.matricula, u.nome, u.tipoUsuario, u.emprestimosAtivos, u.limiteEmprestimos);
+        printf("ID: %d | Matricula: %s | Nome: %s | Tipo: %s | Emprestimos: %d/%d | cpf: %s\n",
+               u.id, u.matricula, u.nome, u.tipoUsuario, u.emprestimosAtivos, u.limiteEmprestimos, u.cpf);
     }
 }
 
 int buscarUsuarioPorCPF(char *cpf) {
+    char temp[50];
+    strcpy(temp, cpf);
+    temp[strcspn(temp, "\n")] = '\0';
+    
     for (int i = 0; i < usuarios.total; i++) {
-        if (strcmp(usuarios.usuarios[i].cpf, cpf) == 0) {
+        if (strcmp(usuarios.usuarios[i].cpf, temp) == 0) {
             return i;
         }
     }
@@ -335,8 +347,8 @@ int buscarLivro(char *titulo) {
 
 void emprestarLivro() {
     printf("=== INSIRA O CPF DO USUARIO ===\n");
-    char cpf[15];
-    fgets(cpf, 15, stdin);
+    char cpf[50];
+    fgets(cpf, 50, stdin);
 
     int userIndex = buscarUsuarioPorCPF(cpf);
     if (userIndex == -1) {
@@ -992,9 +1004,9 @@ int main() {
                 break;
             }
             case 8:{
-                char cpf[15];
+                char cpf[50];
                 printf("CPF: ");
-                fgets(cpf, 15, stdin);
+                fgets(cpf, 50, stdin);
                 int index = buscarUsuarioPorCPF(cpf);
                 if (index != -1) {
                     Usuario u = usuarios.usuarios[index];
@@ -1009,9 +1021,9 @@ int main() {
                 break;
             }
             case 10:{
-                char cpf[15];
+                char cpf[50];
                 printf("CPF: ");
-                fgets(cpf, 15, stdin);
+                fgets(cpf, 50, stdin);
                 int index = buscarUsuarioPorCPF(cpf);
                 if (index != -1) {
                     Usuario u = usuarios.usuarios[index];
